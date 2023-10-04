@@ -187,3 +187,54 @@ A	2021-01-10	ramen
 B	2021-01-11	sushi
 */
 
+-- 7. Which item was purchased just before the customer became a member?
+
+WITH temp AS (
+  SELECT 
+    s.customer_id, 
+    s.product_id, 
+    s.order_date, 
+    ROW_NUMBER() OVER(
+      PARTITION BY s.customer_id 
+      ORDER BY 
+        s.order_date DESC
+    ) AS 'before_rank' 
+  FROM 
+    sales s 
+    JOIN members m ON m.customer_id = s.customer_id 
+    AND s.order_date < m.join_date
+) 
+SELECT 
+  t.customer_id, 
+  m.product_name 
+FROM 
+  temp t 
+  JOIN menu m ON t.product_id = m.product_id 
+WHERE 
+  t.before_rank = 1;
+
+/*
+Output:
+A	sushi
+B	sushi
+*/
+
+-- 8. What is the total items and amount spent for each member before they became a member?
+
+SELECT 
+  s.customer_id, 
+  COUNT(s.product_id) AS 'total_items', 
+  SUM(m.price) AS 'total_price' 
+FROM 
+  sales s 
+  JOIN menu m ON m.product_id = s.product_id 
+  JOIN members mem on s.customer_id = mem.customer_id 
+  AND s.order_date < mem.join_date 
+GROUP BY 
+  s.customer_id;
+
+/*
+Output:
+A	2	25
+B	3	40
+*/
